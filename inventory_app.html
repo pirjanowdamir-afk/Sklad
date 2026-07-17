@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Умный Склад — Система учёта товаров</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PWA Manifest Inline Data URL -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Умный Склад","short_name":"Склад","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#10b981","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/3045/3045437.png","sizes":"512x512","type":"image/png"}]}' />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for clean aesthetics */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col md:flex-row">
+
+    <!-- SIDEBAR -->
+    <aside class="w-full md:w-64 bg-slate-900 text-slate-100 flex flex-col shrink-0 border-r border-slate-800">
+        <!-- Logo Header -->
+        <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-500 text-slate-900 p-2 rounded-lg flex items-center justify-center">
+                    <i data-lucide="package" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Умный Склад</h1>
+                    <span class="text-xs text-slate-400">Система учёта v1.1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto" id="nav-menu">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-150 text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 text-emerald-500"></i>
+                <span class="font-medium text-sm">Склад (Сводная)</span>
+            </button>
+            <button onclick="switchTab('transactions')" id="btn-transactions" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-150 text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i data-lucide="arrow-left-right" class="w-5 h-5 text-emerald-400"></i>
+                <span class="font-medium text-sm">Ввод остатков / Приход</span>
+            </button>
+            <button onclick="switchTab('catalog')" id="btn-catalog" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-150 text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i data-lucide="settings-2" class="w-5 h-5 text-emerald-400"></i>
+                <span class="font-medium text-sm">Настройка порогов</span>
+            </button>
+            <button onclick="switchTab('history')" id="btn-history" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-150 text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i data-lucide="history" class="w-5 h-5 text-emerald-400"></i>
+                <span class="font-medium text-sm">История операций</span>
+            </button>
+            <button onclick="switchTab('analytics')" id="btn-analytics" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-150 text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-400"></i>
+                <span class="font-medium text-sm">Аналитика недели</span>
+            </button>
+            <button onclick="switchTab('backup')" id="btn-backup" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition duration-150 text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i data-lucide="database" class="w-5 h-5 text-emerald-400"></i>
+                <span class="font-medium text-sm">Бэкап и Импорт</span>
+            </button>
+
+            <!-- PWA Install Button -->
+            <div class="pt-4 border-t border-slate-800 mt-4 px-2">
+                <button onclick="triggerPWAInstall()" id="btn-install-pwa" class="install-pwa-btn hidden w-full bg-emerald-500 hover:bg-emerald-600 text-slate-900 px-3 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 shadow transition">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span>Установить на экран</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+            Разработано по вашему шаблону Excel
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-y-auto pb-12">
+        
+        <!-- TOP APP BAR -->
+        <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-30">
+            <div class="flex items-center space-x-4">
+                <h2 id="current-title" class="text-xl font-bold text-slate-800">Сводная таблица склада</h2>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span id="datetime" class="text-xs text-slate-500 hidden sm:inline"></span>
+                <!-- Quick add buttons -->
+                <button onclick="openQuickTransaction('остаток')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm transition">
+                    <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                    <span>Вписать остаток</span>
+                </button>
+                <button onclick="openQuickTransaction('приход')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm transition">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span>+ Приход</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- NOTIFICATION TOAST -->
+        <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl flex items-center space-x-3">
+            <div id="toast-icon" class="text-emerald-400">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+            </div>
+            <span id="toast-text" class="text-sm font-medium">Операция успешно выполнена!</span>
+        </div>
+
+        <!-- CONTENT TABS -->
+        <div class="p-6 max-w-7xl w-full mx-auto flex-1">
+            
+            <!-- 1. DASHBOARD TAB -->
+            <section id="tab-dashboard" class="tab-content space-y-6">
+                <!-- Summary Metrics Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 rounded-xl bg-slate-100 text-slate-600">
+                            <i data-lucide="boxes" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Всего товаров</p>
+                            <h3 id="stat-total-products" class="text-2xl font-bold text-slate-800">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 rounded-xl bg-emerald-50 text-emerald-600">
+                            <i data-lucide="package-check" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Остаток на складе</p>
+                            <h3 id="stat-total-stock" class="text-2xl font-bold text-emerald-600">0 шт</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 rounded-xl bg-amber-50 text-amber-600">
+                            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Пора заказать</p>
+                            <h3 id="stat-need-reorder" class="text-2xl font-bold text-amber-600">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 rounded-xl bg-rose-50 text-rose-600">
+                            <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Критический запас</p>
+                            <h3 id="stat-critical-stock" class="text-2xl font-bold text-rose-600">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Inventory Sheet -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <!-- Controls Bar -->
+                    <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <!-- Search & Filter -->
+                        <div class="flex flex-1 max-w-lg items-center space-x-3">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="dashboard-search" oninput="renderDashboardTable()" placeholder="Поиск по названию или артикулу..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                            </div>
+                            <select id="dashboard-filter" onchange="renderDashboardTable()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <option value="all">Все статусы</option>
+                                <option value="norm">В норме</option>
+                                <option value="reorder">Пора заказать</option>
+                                <option value="critical">Критический запас</option>
+                            </select>
+                        </div>
+                        <!-- Download buttons -->
+                        <div class="flex items-center space-x-2">
+                            <button onclick="exportInventoryToCSV()" class="border border-slate-200 hover:bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                <span>Экспорт Excel (CSV)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Table Container -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100/75 border-b border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider">
+                                    <th class="py-4 px-6">Артикул</th>
+                                    <th class="py-4 px-6">Наименование товара</th>
+                                    <th class="py-4 px-6 text-center">Мин. запас</th>
+                                    <th class="py-4 px-6 text-center bg-emerald-50/50 text-emerald-800">Приход (шт)</th>
+                                    <th class="py-4 px-6 text-center bg-rose-50/30 text-rose-800">Расход (шт)</th>
+                                    <th class="py-4 px-6 text-center bg-slate-100/50 font-bold">Остаток (шт)</th>
+                                    <th class="py-4 px-6 text-center">Статус склада</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-tbody" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic rows go here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. ADD TRANSACTION TAB -->
+            <section id="tab-transactions" class="tab-content hidden max-w-2xl mx-auto space-y-6">
+                
+                <!-- Toggle Form Sub-Tabs -->
+                <div class="flex bg-slate-200 p-1.5 rounded-xl">
+                    <button onclick="switchFormSubTab('recount')" id="btn-sub-recount" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 bg-white text-slate-900 shadow-sm">
+                        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                        <span>Вписать фактический остаток (Уход авто)</span>
+                    </button>
+                    <button onclick="switchFormSubTab('manual')" id="btn-sub-manual" class="flex-1 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900">
+                        <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                        <span>Простая операция (Приход/Расход)</span>
+                    </button>
+                </div>
+
+                <!-- SUB TAB 1: RECOUNT FORM (Ввод фактического остатка) -->
+                <div id="form-sub-recount" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 bg-slate-50/50 border-l-4 border-indigo-600">
+                        <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+                            <i data-lucide="clipboard-check" class="w-5 h-5 text-indigo-600"></i>
+                            <span>Фиксация остатка на складе</span>
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">Просто введите сколько штук товара сейчас лежит на складе. Программа сама сравнит с прошлым значением и автоматически запишет разницу как <b>Расход (уход)</b> или <b>Приход (излишки)</b>!</p>
+                    </div>
+
+                    <form id="recount-form" onsubmit="handleRecountSubmit(event)" class="p-6 space-y-5">
+                        <div>
+                            <label for="recount_product" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Выберите товар</label>
+                            <select id="recount_product" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <!-- Dynamic options -->
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="recount_qty" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Фактический остаток на полке (шт)</label>
+                                <input type="number" id="recount_qty" min="0" required placeholder="Например: 120" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label for="recount_date" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Дата пересчета</label>
+                                <input type="date" id="recount_date" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="recount_comment" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Примечание (необязательно)</label>
+                            <input type="text" id="recount_comment" placeholder="Например: Еженедельная инвентаризация" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <div class="pt-2">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-md transition flex items-center justify-center space-x-2">
+                                <i data-lucide="check-square" class="w-5 h-5"></i>
+                                <span>Зафиксировать остаток и рассчитать уход</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- SUB TAB 2: MANUAL TRANSACTION FORM (Приход / Расход) -->
+                <div id="form-sub-manual" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hidden">
+                    <div class="p-6 border-b border-slate-100 bg-slate-50/50 border-l-4 border-emerald-500">
+                        <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+                            <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-500"></i>
+                            <span>Записать одиночную операцию (Поставка / Списание)</span>
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">Используйте эту форму, если вы хотите вручную зафиксировать конкретную партию поставки (+) или списание брака (-).</p>
+                    </div>
+
+                    <form id="transaction-form" onsubmit="handleTransactionSubmit(event)" class="p-6 space-y-5">
+                        <!-- Type selector -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Тип операции</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <label class="border-2 border-emerald-500 bg-emerald-50/20 rounded-xl p-4 flex items-center justify-center cursor-pointer transition select-none hover:bg-emerald-50/40" id="label-type-inbound">
+                                    <input type="radio" name="tr_type" value="приход" checked onchange="toggleFormStyles()" class="sr-only">
+                                    <div class="text-center">
+                                        <i data-lucide="arrow-down-left" class="w-6 h-6 text-emerald-600 mx-auto mb-1"></i>
+                                        <span class="block font-bold text-sm text-emerald-800">Приход (Поступление)</span>
+                                    </div>
+                                </label>
+                                <label class="border-2 border-slate-200 bg-white rounded-xl p-4 flex items-center justify-center cursor-pointer transition select-none hover:bg-slate-50" id="label-type-outbound">
+                                    <input type="radio" name="tr_type" value="расход" onchange="toggleFormStyles()" class="sr-only">
+                                    <div class="text-center">
+                                        <i data-lucide="arrow-up-right" class="w-6 h-6 text-slate-400 mx-auto mb-1" id="outbound-icon"></i>
+                                        <span class="block font-bold text-sm text-slate-600" id="outbound-text">Расход (Списание)</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Product Selector -->
+                        <div>
+                            <label for="tr_product" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Выберите товар</label>
+                            <select id="tr_product" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <!-- Options will be dynamic -->
+                            </select>
+                        </div>
+
+                        <!-- Quantity and Date Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="tr_quantity" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Количество (шт)</label>
+                                <input type="number" id="tr_quantity" min="1" placeholder="Например: 50" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label for="tr_date" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Дата операции</label>
+                                <input type="date" id="tr_date" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                        </div>
+
+                        <!-- Comment / Note -->
+                        <div>
+                            <label for="tr_comment" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Комментарий / Примечание</label>
+                            <input type="text" id="tr_comment" placeholder="Например: Поставка от поставщика" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="pt-2">
+                            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-md transition flex items-center justify-center space-x-2">
+                                <i data-lucide="check" class="w-5 h-5"></i>
+                                <span>Сохранить операцию</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 3. CATALOG & SETTINGS TAB -->
+            <section id="tab-catalog" class="tab-content hidden space-y-6">
+                <!-- Top card: Add new product -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                    <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                        <i data-lucide="plus" class="w-5 h-5 text-emerald-500"></i>
+                        <span>Добавить новую позицию в каталог</span>
+                    </h3>
+                    <form id="product-form" onsubmit="handleProductSubmit(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label for="p_sku" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Артикул / SKU</label>
+                            <input type="text" id="p_sku" required placeholder="A-08" class="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="p_name" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Наименование товара</label>
+                            <input type="text" id="p_name" required placeholder="Коробка картонная" class="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div>
+                            <label for="p_min_stock" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Мин. запас (Порог заказа)</label>
+                            <input type="number" id="p_min_stock" min="0" required placeholder="10" class="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="md:col-span-4 flex justify-end mt-2">
+                            <button type="submit" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition">
+                                Добавить товар
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Table: Edit thresholds and info -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 bg-slate-50/50">
+                        <h3 class="text-base font-bold text-slate-800">Управление товарами и порогами «Мин. запаса»</h3>
+                        <p class="text-xs text-slate-500 mt-1">Здесь вы можете вручную настроить минимальный лимит для каждого товара. Если остаток упадет ниже этого лимита, система покажет статус «Пора заказать».</p>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider">
+                                    <th class="py-4 px-6 w-32">Артикул</th>
+                                    <th class="py-4 px-6">Наименование товара</th>
+                                    <th class="py-4 px-6 text-center w-48">Минимальный запас</th>
+                                    <th class="py-4 px-6 text-center w-36">Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="catalog-tbody" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. TRANSACTION HISTORY TAB -->
+            <section id="tab-history" class="tab-content hidden space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800">Архив операций</h3>
+                            <p class="text-xs text-slate-500">Список всех зарегистрированных поступлений, списаний и инвентаризаций.</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <select id="history-filter-type" onchange="renderHistoryTable()" class="border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white">
+                                <option value="all">Все операции</option>
+                                <option value="приход">Только Приход</option>
+                                <option value="расход">Только Расход</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider">
+                                    <th class="py-4 px-6 w-36">Дата</th>
+                                    <th class="py-4 px-6 w-28">Артикул</th>
+                                    <th class="py-4 px-6">Товар</th>
+                                    <th class="py-4 px-6 text-center w-28">Тип</th>
+                                    <th class="py-4 px-6 text-center w-28">Количество</th>
+                                    <th class="py-4 px-6">Примечание / Метод учета</th>
+                                    <th class="py-4 px-6 text-center w-24">Удалить</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-tbody" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. ANALYTICS TAB (НЕДЕЛЬНАЯ АНАЛИТИКА УХОДА) -->
+            <section id="tab-analytics" class="tab-content hidden space-y-6">
+                <!-- Info Callout -->
+                <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-xl flex items-start space-x-3">
+                    <i data-lucide="info" class="w-5 h-5 text-indigo-600 shrink-0 mt-0.5"></i>
+                    <div>
+                        <h4 class="text-sm font-bold text-indigo-950">Аналитика недельного расхода («Ухода»)</h4>
+                        <p class="text-xs text-indigo-900 mt-1">Программа автоматически группирует расходы по неделям, рассчитывает среднюю скорость ухода со склада и прогнозирует, на сколько недель работы вам хватит текущего остатка.</p>
+                    </div>
+                </div>
+
+                <!-- Table of Weekly Stats and Predictions -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 bg-slate-50/50">
+                        <h3 class="text-sm font-bold text-slate-800">Показатели ухода и прогноз запасов</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs font-semibold uppercase tracking-wider">
+                                    <th class="py-4 px-6 w-28">Артикул</th>
+                                    <th class="py-4 px-6">Товар</th>
+                                    <th class="py-4 px-6 text-center bg-indigo-50/30 text-indigo-950">Расход за 7 дней (шт)</th>
+                                    <th class="py-4 px-6 text-center text-slate-500">Прошлая неделя (шт)</th>
+                                    <th class="py-4 px-6 text-center font-bold text-emerald-800 bg-emerald-50/20">Ср. уход в неделю (шт)</th>
+                                    <th class="py-4 px-6 text-center">Остаток на складе</th>
+                                    <th class="py-4 px-6 text-center">Прогноз (Хватит на)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analytics-tbody" class="divide-y divide-slate-100 text-sm">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Visual Chart Cards -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
+                            <i data-lucide="bar-chart-2" class="w-5 h-5 text-indigo-600"></i>
+                            <span>Сравнение расхода за текущие 7 дней</span>
+                        </h3>
+                        <div id="analytics-progress-container" class="space-y-4">
+                            <!-- Custom dynamic bars -->
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
+                            <i data-lucide="calendar" class="w-5 h-5 text-emerald-600"></i>
+                            <span>Прогноз выживаемости остатков (в неделях)</span>
+                        </h3>
+                        <div id="analytics-forecast-container" class="space-y-4">
+                            <!-- Custom forecast indicators -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. BACKUP & EXPORT TAB -->
+            <section id="tab-backup" class="tab-content hidden max-w-2xl mx-auto space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center space-x-2">
+                        <i data-lucide="save" class="w-5 h-5 text-emerald-500"></i>
+                        <span>Резервное копирование</span>
+                    </h3>
+                    <p class="text-sm text-slate-500 mb-5">
+                        Поскольку приложение сохраняет ваши данные локально на вашем компьютере (в памяти браузера), мы рекомендуем периодически скачивать бэкап, чтобы не потерять данные при чистке браузера.
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <button onclick="downloadBackupJSON()" class="bg-slate-900 hover:bg-slate-800 text-white p-4 rounded-xl font-bold flex flex-col items-center justify-center space-y-2 transition shadow-sm">
+                            <i data-lucide="file-json" class="w-8 h-8 text-emerald-400"></i>
+                            <span class="text-sm">Скачать бэкап (.JSON)</span>
+                            <span class="text-xs text-slate-400 font-normal">Полная копия базы с историей</span>
+                        </button>
+
+                        <button onclick="document.getElementById('import-file-input').click()" class="border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-white hover:bg-slate-50 text-slate-700 p-4 rounded-xl font-bold flex flex-col items-center justify-center space-y-2 transition">
+                            <i data-lucide="upload-cloud" class="w-8 h-8 text-slate-400" id="import-icon"></i>
+                            <span class="text-sm">Загрузить бэкап (.JSON)</span>
+                            <span class="text-xs text-slate-400 font-normal">Восстановить данные из файла</span>
+                            <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="handleImportJSON(event)">
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 border-l-4 border-rose-500">
+                    <h3 class="text-base font-bold text-rose-800 mb-2 flex items-center space-x-2">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        <span>Сброс базы данных</span>
+                    </h3>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Это действие навсегда удалит все товары, транзакции и настройки и вернёт демо-данные из вашей таблицы Excel. Перед сбросом рекомендуется скачать резервную копию.
+                    </p>
+                    <button onclick="resetDatabaseToDemo()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-5 py-2.5 rounded-xl font-bold text-sm transition">
+                        Сбросить базу на демо-данные
+                    </button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- EDIT PRODUCT MODAL -->
+    <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden px-4">
+        <div class="bg-white rounded-2xl border border-slate-200 max-w-md w-full shadow-2xl overflow-hidden transform scale-95 transition-all duration-200" id="modal-container">
+            <div class="p-5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                    <i data-lucide="edit-3" class="w-5 h-5 text-emerald-500"></i>
+                    <span>Редактировать товар</span>
+                </h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="saveProductEdit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit-product-old-sku">
+                <div>
+                    <label for="edit-product-sku" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Артикул / SKU</label>
+                    <input type="text" id="edit-product-sku" required class="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label for="edit-product-name" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Наименование товара</label>
+                    <input type="text" id="edit-product-name" required class="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label for="edit-product-min-stock" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Мин. запас</label>
+                    <input type="number" id="edit-product-min-stock" min="0" required class="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50 transition">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm transition">
+                        Сохранить изменения
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT SYSTEM LOGIC -->
+    <script>
+        const demoProducts = [
+            { sku: "A-01", name: "Коробки для WB", minStock: 100 },
+            { sku: "A-03", name: "Скотч Осторожно Хрупкое", minStock: 8 },
+            { sku: "A-04", name: "Наклейки для AVITO", minStock: 5 },
+            { sku: "A-05", name: "Наклейки для WB / Ozon", minStock: 5 },
+            { sku: "A-06", name: "Пленка 250", minStock: 36 },
+            { sku: "A-07", name: "Пленка 500", minStock: 18 },
+            { sku: "A-08", name: "Скотч Прозрачный", minStock: 8 }
+        ];
+
+        const demoTransactions = [
+            // A-01: In: 700, Out: 323, Balance: 377
+            { id: "tr-101", date: "2026-07-10", sku: "A-01", type: "приход", quantity: 700, comment: "Стартовая поставка" },
+            { id: "tr-102", date: "2026-07-12", sku: "A-01", type: "расход", quantity: 323, comment: "Отгрузка заказов Wildberries" },
+            
+            // A-03: In: 144, Out: 24, Balance: 120
+            { id: "tr-103", date: "2026-07-11", sku: "A-03", type: "приход", quantity: 144, comment: "Поступление скотча" },
+            { id: "tr-104", date: "2026-07-13", sku: "A-03", type: "расход", quantity: 24, comment: "Упаковка хрупкого товара" },
+            
+            // A-04: In: 38, Out: 8, Balance: 30
+            { id: "tr-105", date: "2026-07-09", sku: "A-04", type: "приход", quantity: 38, comment: "Печать наклеек" },
+            { id: "tr-106", date: "2026-07-14", sku: "A-04", type: "расход", quantity: 8, comment: "Маркировка посылок Авито" },
+            
+            // A-05: In: 150, Out: 20, Balance: 130
+            { id: "tr-107", date: "2026-07-10", sku: "A-05", type: "приход", quantity: 150, comment: "Закупка этикеток" },
+            { id: "tr-108", date: "2026-07-15", sku: "A-05", type: "расход", quantity: 20, comment: "Отгрузка на склад Коледино" },
+            
+            // A-06: In: 201, Out: 103, Balance: 98
+            { id: "tr-109", date: "2026-07-08", sku: "A-06", type: "приход", quantity: 201, comment: "Поставка пленки 250" },
+            { id: "tr-110", date: "2026-07-14", sku: "A-06", type: "расход", quantity: 103, comment: "Обмотка паллет" },
+            
+            // A-07: In: 151, Out: 94, Balance: 57
+            { id: "tr-111", date: "2026-07-08", sku: "A-07", type: "приход", quantity: 151, comment: "Поставка пленки 500" },
+            { id: "tr-112", date: "2026-07-15", sku: "A-07", type: "расход", quantity: 94, comment: "Списание под крупную отгрузку" },
+            
+            // A-08: In: 129, Out: 87, Balance: 42
+            { id: "tr-113", date: "2026-07-10", sku: "A-08", type: "приход", quantity: 129, comment: "Коробка скотча прозрачного" },
+            { id: "tr-114", date: "2026-07-16", sku: "A-08", type: "расход", quantity: 87, comment: "Упаковочные работы" }
+        ];
+
+        // STATE VARIABLES
+        let products = [];
+        let transactions = [];
+        let deferredPrompt;
+
+        // PWA SERVICE WORKER REGISTER
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+                    self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+                    self.addEventListener('fetch', e => {});
+                `;
+                const blob = new Blob([swCode], {type: 'application/javascript'});
+                navigator.serviceWorker.register(URL.createObjectURL(blob))
+                    .then(reg => console.log('Service Worker зарегистрирован!', reg))
+                    .catch(err => console.log('Ошибка SW:', err));
+            });
+        }
+
+        // PWA INSTALL TRIGGER
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById("btn-install-pwa");
+            if (btn) btn.classList.remove("hidden");
+        });
+
+        async function triggerPWAInstall() {
+            if (!deferredPrompt) {
+                alert("Установка уже выполнена или ваш браузер не поддерживает прямую установку (на iOS нажмите «Поделиться» -> «На экран Домой»)");
+                return;
+            }
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log("Install outcome:", outcome);
+            deferredPrompt = null;
+            const btn = document.getElementById("btn-install-pwa");
+            if (btn) btn.classList.add("hidden");
+        }
+
+        // ON LOAD INITIALIZATION
+        window.addEventListener("DOMContentLoaded", () => {
+            initDatabase();
+            switchTab('dashboard');
+            
+            const todayStr = new Date().toISOString().substring(0, 10);
+            document.getElementById("tr_date").value = todayStr;
+            document.getElementById("recount_date").value = todayStr;
+            
+            setInterval(updateClock, 1000);
+            updateClock();
+            
+            lucide.createIcons();
+        });
+
+        function updateClock() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            document.getElementById("datetime").textContent = new Date().toLocaleDateString('ru-RU', options);
+        }
+
+        function initDatabase() {
+            const savedProducts = localStorage.getItem("inventory_products");
+            const savedTransactions = localStorage.getItem("inventory_transactions");
+
+            if (savedProducts && savedTransactions) {
+                products = JSON.parse(savedProducts);
+                transactions = JSON.parse(savedTransactions);
+            } else {
+                products = [...demoProducts];
+                transactions = [...demoTransactions];
+                saveToLocalStorage();
+            }
+            updateDropdowns();
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem("inventory_products", JSON.stringify(products));
+            localStorage.setItem("inventory_transactions", JSON.stringify(transactions));
+        }
+
+        function updateDropdowns() {
+            const selectEl = document.getElementById("tr_product");
+            const selectRecount = document.getElementById("recount_product");
+            selectEl.innerHTML = "";
+            selectRecount.innerHTML = "";
+            
+            products.forEach(p => {
+                const opt = document.createElement("option");
+                opt.value = p.sku;
+                opt.textContent = `[${p.sku}] ${p.name}`;
+                selectEl.appendChild(opt);
+
+                const opt2 = opt.cloneNode(true);
+                selectRecount.appendChild(opt2);
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+            document.querySelectorAll(".nav-btn").forEach(el => {
+                el.classList.remove("bg-slate-800", "text-white");
+                el.classList.add("text-slate-300");
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove("hidden");
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.add("bg-slate-800", "text-white");
+                activeBtn.classList.remove("text-slate-300");
+            }
+
+            const titles = {
+                dashboard: "Сводная таблица склада",
+                transactions: "Ввод остатков и приходов",
+                catalog: "Управление пороговыми значениями (Мин. запас)",
+                history: "История складских операций",
+                analytics: "Недельная аналитика расхода",
+                backup: "Управление базой данных и резервное копирование"
+            };
+            document.getElementById("current-title").textContent = titles[tabId] || "Умный Склад";
+
+            if (tabId === 'dashboard') {
+                renderDashboardTable();
+            } else if (tabId === 'catalog') {
+                renderCatalogTable();
+            } else if (tabId === 'history') {
+                renderHistoryTable();
+            } else if (tabId === 'analytics') {
+                renderWeeklyAnalytics();
+            }
+        }
+
+        function switchFormSubTab(subTabId) {
+            document.getElementById("form-sub-recount").classList.add("hidden");
+            document.getElementById("form-sub-manual").classList.add("hidden");
+            
+            document.getElementById("btn-sub-recount").className = "flex-1 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900";
+            document.getElementById("btn-sub-manual").className = "flex-1 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900";
+
+            document.getElementById(`form-sub-${subTabId}`).classList.remove("hidden");
+            const activeBtn = document.getElementById(`btn-sub-${subTabId}`);
+            activeBtn.className = "flex-1 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 bg-white text-slate-900 shadow-sm";
+        }
+
+        function calculateInventory() {
+            const inventory = {};
+            
+            products.forEach(p => {
+                inventory[p.sku] = {
+                    sku: p.sku,
+                    name: p.name,
+                    minStock: parseInt(p.minStock) || 0,
+                    inbound: 0,
+                    outbound: 0,
+                    balance: 0,
+                    status: ""
+                };
+            });
+
+            transactions.forEach(tr => {
+                const item = inventory[tr.sku];
+                if (item) {
+                    const qty = parseInt(tr.quantity) || 0;
+                    if (tr.type === 'приход') {
+                        item.inbound += qty;
+                    } else if (tr.type === 'расход') {
+                        item.outbound += qty;
+                    }
+                }
+            });
+
+            let totalStock = 0;
+            let needReorderCount = 0;
+            let criticalCount = 0;
+
+            Object.values(inventory).forEach(item => {
+                item.balance = item.inbound - item.outbound;
+                totalStock += item.balance;
+
+                if (item.balance <= 0) {
+                    item.status = "Критический запас";
+                    criticalCount++;
+                } else if (item.balance <= (item.minStock * 0.2)) {
+                    item.status = "Критический запас";
+                    criticalCount++;
+                } else if (item.balance <= item.minStock) {
+                    item.status = "Пора заказать";
+                    needReorderCount++;
+                } else {
+                    item.status = "В норме";
+                }
+            });
+
+            return {
+                inventory: Object.values(inventory),
+                totals: {
+                    totalProducts: products.length,
+                    totalStock: totalStock,
+                    needReorder: needReorderCount,
+                    critical: criticalCount
+                }
+            };
+        }
+
+        function renderDashboardTable() {
+            const data = calculateInventory();
+            const items = data.inventory;
+            const totals = data.totals;
+
+            document.getElementById("stat-total-products").textContent = totals.totalProducts;
+            document.getElementById("stat-total-stock").textContent = totals.totalStock.toLocaleString('ru-RU') + " шт";
+            document.getElementById("stat-need-reorder").textContent = totals.needReorder;
+            document.getElementById("stat-critical-stock").textContent = totals.critical;
+
+            const query = document.getElementById("dashboard-search").value.toLowerCase();
+            const filter = document.getElementById("dashboard-filter").value;
+
+            const tbody = document.getElementById("dashboard-tbody");
+            tbody.innerHTML = "";
+
+            let visibleCount = 0;
+
+            items.forEach(item => {
+                const matchesQuery = item.sku.toLowerCase().includes(query) || item.name.toLowerCase().includes(query);
+                
+                let matchesFilter = true;
+                if (filter === 'norm' && item.status !== 'В норме') matchesFilter = false;
+                if (filter === 'reorder' && item.status !== 'Пора заказать') matchesFilter = false;
+                if (filter === 'critical' && item.status !== 'Критический запас') matchesFilter = false;
+
+                if (matchesQuery && matchesFilter) {
+                    visibleCount++;
+                    const row = document.createElement("tr");
+                    row.className = "hover:bg-slate-50/75 transition";
+
+                    let statusBadge = "";
+                    if (item.status === 'В норме') {
+                        statusBadge = `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 shadow-sm border border-emerald-200">
+                                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></span>
+                                            В норме
+                                       </span>`;
+                    } else if (item.status === 'Пора заказать') {
+                        statusBadge = `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 shadow-sm border border-amber-200">
+                                            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5"></span>
+                                            Пора заказать
+                                       </span>`;
+                    } else {
+                        statusBadge = `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 shadow-sm border border-rose-200">
+                                            <span class="w-1.5 h-1.5 bg-rose-600 rounded-full mr-1.5 animate-bounce"></span>
+                                            Критический запас
+                                       </span>`;
+                    }
+
+                    let balanceClass = "font-bold text-center py-4 px-6 ";
+                    if (item.balance <= 0) balanceClass += "text-rose-600";
+                    else if (item.balance <= item.minStock) balanceClass += "text-amber-600";
+                    else balanceClass += "text-slate-800";
+
+                    row.innerHTML = `
+                        <td class="py-4 px-6 font-semibold text-slate-500">${item.sku}</td>
+                        <td class="py-4 px-6 font-medium text-slate-800">${item.name}</td>
+                        <td class="py-4 px-6 text-center text-slate-600">${item.minStock}</td>
+                        <td class="py-4 px-6 text-center text-emerald-700 bg-emerald-50/20 font-medium">${item.inbound}</td>
+                        <td class="py-4 px-6 text-center text-rose-700 bg-rose-50/10 font-medium">${item.outbound}</td>
+                        <td class="${balanceClass} bg-slate-50/30">${item.balance}</td>
+                        <td class="py-4 px-6 text-center">${statusBadge}</td>
+                    `;
+                    tbody.appendChild(row);
+                }
+            });
+
+            if (visibleCount === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-12 text-center text-slate-400 font-medium">
+                            <i data-lucide="package-open" class="w-12 h-12 mx-auto mb-2 text-slate-300"></i>
+                            Товары не найдены
+                        </td>
+                    </tr>
+                `;
+                lucide.createIcons();
+            }
+        }
+
+        function openQuickTransaction(type) {
+            switchTab('transactions');
+            if (type === 'остаток') {
+                switchFormSubTab('recount');
+            } else if (type === 'приход') {
+                switchFormSubTab('manual');
+                document.querySelector('input[name="tr_type"][value="приход"]').checked = true;
+                toggleFormStyles();
+            }
+        }
+
+        function handleRecountSubmit(e) {
+            e.preventDefault();
+            const sku = document.getElementById("recount_product").value;
+            const actualQty = parseInt(document.getElementById("recount_qty").value);
+            const date = document.getElementById("recount_date").value;
+            const comment = document.getElementById("recount_comment").value.trim() || "Инвентаризация (пересчет)";
+
+            if (!sku || isNaN(actualQty) || !date) {
+                showToast("Заполните обязательные поля!", true);
+                return;
+            }
+
+            const data = calculateInventory();
+            const item = data.inventory.find(i => i.sku === sku);
+            const currentSystemBalance = item ? item.balance : 0;
+
+            const diff = currentSystemBalance - actualQty;
+
+            let trType = "";
+            let quantity = 0;
+            let finalComment = comment;
+
+            if (diff > 0) {
+                trType = "расход";
+                quantity = diff;
+                finalComment += ` (Авто-расчет ухода: -${diff} шт)`;
+            } else if (diff < 0) {
+                trType = "приход";
+                quantity = Math.abs(diff);
+                finalComment += ` (Авто-приход излишков: +${quantity} шт)`;
+            } else {
+                showToast("Фактический остаток совпадает с системным. Корректировка не требуется!");
+                document.getElementById("recount_qty").value = "";
+                return;
+            }
+
+            const newTr = {
+                id: "tr-" + Date.now(),
+                date,
+                sku,
+                type: trType,
+                quantity,
+                comment: finalComment
+            };
+
+            transactions.unshift(newTr);
+            saveToLocalStorage();
+            showToast(`Фактический остаток зафиксирован! Программа записала ${trType === 'расход' ? 'уход (-' : 'приход (+'}${quantity} шт)`);
+            
+            document.getElementById("recount_qty").value = "";
+            document.getElementById("recount_comment").value = "";
+            
+            switchTab('dashboard');
+        }
+
+        function handleTransactionSubmit(e) {
+            e.preventDefault();
+            const trType = document.querySelector('input[name="tr_type"]:checked').value;
+            const sku = document.getElementById("tr_product").value;
+            const quantity = parseInt(document.getElementById("tr_quantity").value);
+            const date = document.getElementById("tr_date").value;
+            const comment = document.getElementById("tr_comment").value.trim() || (trType === 'приход' ? "Ручной ввод прихода" : "Продажи / Уход");
+
+            if (!sku || isNaN(quantity) || !date) {
+                showToast("Заполните обязательные поля!", true);
+                return;
+            }
+
+            const newTr = {
+                id: "tr-" + Date.now(),
+                date,
+                sku,
+                type: trType,
+                quantity,
+                comment
+            };
+
+            transactions.unshift(newTr);
+            saveToLocalStorage();
+            showToast(trType === 'приход' ? `Поступление +${quantity} шт записано!` : `Списание -${quantity} шт записано!`);
+            
+            document.getElementById("tr_quantity").value = "";
+            document.getElementById("tr_comment").value = "";
+            
+            switchTab('dashboard');
+        }
+
+        function toggleFormStyles() {
+            const trType = document.querySelector('input[name="tr_type"]:checked').value;
+            const labelInbound = document.getElementById("label-type-inbound");
+            const labelOutbound = document.getElementById("label-type-outbound");
+            const outboundIcon = document.getElementById("outbound-icon");
+            const outboundText = document.getElementById("outbound-text");
+
+            if (trType === 'приход') {
+                labelInbound.className = "border-2 border-emerald-500 bg-emerald-50/20 rounded-xl p-4 flex items-center justify-center cursor-pointer transition select-none hover:bg-emerald-50/40";
+                labelOutbound.className = "border-2 border-slate-200 bg-white rounded-xl p-4 flex items-center justify-center cursor-pointer transition select-none hover:bg-slate-50";
+                outboundIcon.className = "w-6 h-6 text-slate-400 mx-auto mb-1";
+                outboundText.className = "block font-bold text-sm text-slate-600";
+            } else {
+                labelInbound.className = "border-2 border-slate-200 bg-white rounded-xl p-4 flex items-center justify-center cursor-pointer transition select-none hover:bg-slate-50";
+                labelOutbound.className = "border-2 border-rose-500 bg-rose-50/20 rounded-xl p-4 flex items-center justify-center cursor-pointer transition select-none hover:bg-rose-50/40";
+                outboundIcon.className = "w-6 h-6 text-rose-600 mx-auto mb-1";
+                outboundText.className = "block font-bold text-sm text-rose-800";
+            }
+        }
+
+        function renderCatalogTable() {
+            const tbody = document.getElementById("catalog-tbody");
+            tbody.innerHTML = "";
+
+            products.forEach(p => {
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50 transition";
+                row.innerHTML = `
+                    <td class="py-4 px-6 font-semibold text-slate-500">${p.sku}</td>
+                    <td class="py-4 px-6 font-medium text-slate-800">${p.name}</td>
+                    <td class="py-4 px-6 text-center">
+                        <div class="flex items-center justify-center space-x-2">
+                            <span class="font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">${p.minStock} шт</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 text-center">
+                        <div class="flex items-center justify-center space-x-2">
+                            <button onclick="openEditModal('${p.sku}')" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-lg transition" title="Редактировать">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteProduct('${p.sku}')" class="text-rose-600 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 p-2 rounded-lg transition" title="Удалить">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        function handleProductSubmit(e) {
+            e.preventDefault();
+            const sku = document.getElementById("p_sku").value.trim().toUpperCase();
+            const name = document.getElementById("p_name").value.trim();
+            const minStock = parseInt(document.getElementById("p_min_stock").value);
+
+            if (products.some(p => p.sku === sku)) {
+                alert(`Товар с артикулом ${sku} уже существует!`);
+                return;
+            }
+
+            const newProduct = { sku, name, minStock };
+            products.push(newProduct);
+            saveToLocalStorage();
+            updateDropdowns();
+            renderCatalogTable();
+            showToast(`Товар ${name} добавлен в каталог!`);
+
+            document.getElementById("p_sku").value = "";
+            document.getElementById("p_name").value = "";
+            document.getElementById("p_min_stock").value = "";
+        }
+
+        function deleteProduct(sku) {
+            const product = products.find(p => p.sku === sku);
+            if (!product) return;
+
+            const hasOps = transactions.some(t => t.sku === sku);
+            let confirmMsg = `Вы уверены, что хотите удалить товар "${product.name}"?`;
+            if (hasOps) {
+                confirmMsg += `\nВНИМАНИЕ: Это также удалит ВСЕ связанные операции (${transactions.filter(t => t.sku === sku).length} шт.) из истории!`;
+            }
+
+            if (confirm(confirmMsg)) {
+                products = products.filter(p => p.sku !== sku);
+                transactions = transactions.filter(t => t.sku !== sku);
+                saveToLocalStorage();
+                updateDropdowns();
+                renderCatalogTable();
+                showToast(`Товар "${product.name}" успешно удален.`);
+            }
+        }
+
+        function openEditModal(sku) {
+            const p = products.find(p => p.sku === sku);
+            if (!p) return;
+
+            document.getElementById("edit-product-old-sku").value = p.sku;
+            document.getElementById("edit-product-sku").value = p.sku;
+            document.getElementById("edit-product-name").value = p.name;
+            document.getElementById("edit-product-min-stock").value = p.minStock;
+
+            const modal = document.getElementById("edit-modal");
+            modal.classList.remove("hidden");
+            setTimeout(() => {
+                document.getElementById("modal-container").classList.remove("scale-95");
+                document.getElementById("modal-container").classList.add("scale-100");
+            }, 10);
+            lucide.createIcons();
+        }
+
+        function closeEditModal() {
+            document.getElementById("modal-container").classList.remove("scale-100");
+            document.getElementById("modal-container").classList.add("scale-95");
+            setTimeout(() => {
+                document.getElementById("edit-modal").classList.add("hidden");
+            }, 150);
+        }
+
+        function saveProductEdit(e) {
+            e.preventDefault();
+            const oldSku = document.getElementById("edit-product-old-sku").value;
+            const newSku = document.getElementById("edit-product-sku").value.trim().toUpperCase();
+            const name = document.getElementById("edit-product-name").value.trim();
+            const minStock = parseInt(document.getElementById("edit-product-min-stock").value);
+
+            if (oldSku !== newSku && products.some(p => p.sku === newSku)) {
+                alert(`Другой товар уже использует артикул ${newSku}!`);
+                return;
+            }
+
+            const p = products.find(p => p.sku === oldSku);
+            if (p) {
+                p.sku = newSku;
+                p.name = name;
+                p.minStock = minStock;
+            }
+
+            if (oldSku !== newSku) {
+                transactions.forEach(t => {
+                    if (t.sku === oldSku) t.sku = newSku;
+                });
+            }
+
+            saveToLocalStorage();
+            updateDropdowns();
+            renderCatalogTable();
+            closeEditModal();
+            showToast("Товар успешно отредактирован!");
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById("history-tbody");
+            tbody.innerHTML = "";
+
+            const filterType = document.getElementById("history-filter-type").value;
+            let displayList = transactions;
+
+            if (filterType !== 'all') {
+                displayList = transactions.filter(t => t.type === filterType);
+            }
+
+            displayList.forEach(t => {
+                const product = products.find(p => p.sku === t.sku);
+                const pName = product ? product.name : `<span class="text-rose-500 italic">[Удаленный товар]</span>`;
+                
+                const typeBadge = t.type === 'приход' 
+                    ? `<span class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-full border border-emerald-200">+ Приход</span>`
+                    : `<span class="bg-rose-100 text-rose-800 text-xs font-semibold px-2 py-0.5 rounded-full border border-rose-200">- Расход</span>`;
+
+                const qtyClass = t.type === 'приход' ? "font-bold text-emerald-600 text-center" : "font-bold text-rose-600 text-center";
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50 transition";
+                row.innerHTML = `
+                    <td class="py-4 px-6 text-slate-500 text-xs">${new Date(t.date).toLocaleDateString('ru-RU')}</td>
+                    <td class="py-4 px-6 font-semibold text-slate-500">${t.sku}</td>
+                    <td class="py-4 px-6 font-medium text-slate-800">${pName}</td>
+                    <td class="py-4 px-6 text-center">${typeBadge}</td>
+                    <td class="${qtyClass}">${t.quantity} шт</td>
+                    <td class="py-4 px-6 text-slate-500 text-xs italic">${t.comment || ""}</td>
+                    <td class="py-4 px-6 text-center">
+                        <button onclick="deleteTransaction('${t.id}')" class="text-rose-500 hover:text-rose-800 p-1.5 rounded-lg hover:bg-rose-50 transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            if (displayList.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-12 text-center text-slate-400 font-medium">
+                            <i data-lucide="history" class="w-12 h-12 mx-auto mb-2 text-slate-300"></i>
+                            История операций пуста
+                        </td>
+                    </tr>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function deleteTransaction(id) {
+            const tr = transactions.find(t => t.id === id);
+            if (!tr) return;
+
+            if (confirm(`Вы уверены, что хотите отменить эту операцию (${tr.type === 'приход' ? 'приход' : 'расход'} на ${tr.quantity} шт)?`)) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveToLocalStorage();
+                renderHistoryTable();
+                showToast("Операция отменена, остаток пересчитан!");
+            }
+        }
+
+        // TAB 5: WEEKLY EXPENSE ANALYTICS LOGIC
+        function getWeeklyAnalytics() {
+            const currentDate = new Date();
+            const msInDay = 24 * 60 * 60 * 1000;
+            
+            const analytics = {};
+            
+            products.forEach(p => {
+                analytics[p.sku] = {
+                    sku: p.sku,
+                    name: p.name,
+                    thisWeek: 0,
+                    lastWeek: 0,
+                    totalExpense: 0,
+                    avgWeekly: 0
+                };
+            });
+
+            let minDate = new Date();
+            let hasExpenses = false;
+
+            transactions.forEach(tr => {
+                if (tr.type !== 'расход') return;
+                hasExpenses = true;
+                const trDate = new Date(tr.date);
+                if (trDate < minDate) minDate = trDate;
+            });
+
+            const timespanDays = Math.max(1, Math.round((currentDate - minDate) / msInDay));
+            const totalWeeks = Math.max(1, timespanDays / 7);
+
+            transactions.forEach(tr => {
+                if (tr.type !== 'расход') return;
+                
+                const item = analytics[tr.sku];
+                if (!item) return;
+
+                const trDate = new Date(tr.date);
+                const diffDays = Math.round((currentDate - trDate) / msInDay);
+                const qty = parseInt(tr.quantity) || 0;
+
+                item.totalExpense += qty;
+
+                if (diffDays <= 7) {
+                    item.thisWeek += qty;
+                } else if (diffDays > 7 && diffDays <= 14) {
+                    item.lastWeek += qty;
+                }
+            });
+
+            products.forEach(p => {
+                const item = analytics[p.sku];
+                item.avgWeekly = Math.round(item.totalExpense / totalWeeks);
+                if (item.avgWeekly === 0 && item.totalExpense > 0) {
+                    item.avgWeekly = Math.round(item.totalExpense) || 5;
+                }
+                if (item.avgWeekly === 0) {
+                    item.avgWeekly = 5; // Default average fallback
+                }
+            });
+
+            return analytics;
+        }
+
+        function renderWeeklyAnalytics() {
+            const inventoryData = calculateInventory().inventory;
+            const analyticsData = getWeeklyAnalytics();
+
+            const tbody = document.getElementById("analytics-tbody");
+            tbody.innerHTML = "";
+
+            inventoryData.forEach(item => {
+                const analytics = analyticsData[item.sku] || { thisWeek: 0, lastWeek: 0, avgWeekly: 5 };
+                const weeksLeft = analytics.avgWeekly > 0 ? (item.balance / analytics.avgWeekly).toFixed(1) : 99;
+                
+                let forecastBadge = "";
+                if (item.balance <= 0) {
+                    forecastBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                                        Запас исчерпан!
+                                     </span>`;
+                } else if (weeksLeft < 1) {
+                    forecastBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                                        Критично: ${weeksLeft} нед.
+                                     </span>`;
+                } else if (weeksLeft <= 2) {
+                    forecastBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                                        Пора заказать: ${weeksLeft} нед.
+                                     </span>`;
+                } else {
+                    forecastBadge = `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                        Безопасно: ${weeksLeft} нед.
+                                     </span>`;
+                }
+
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-50 transition text-slate-700";
+                row.innerHTML = `
+                    <td class="py-4 px-6 font-semibold text-slate-500">${item.sku}</td>
+                    <td class="py-4 px-6 font-medium text-slate-800">${item.name}</td>
+                    <td class="py-4 px-6 text-center font-semibold bg-indigo-50/20 text-indigo-950">${analytics.thisWeek} шт</td>
+                    <td class="py-4 px-6 text-center text-slate-400">${analytics.lastWeek} шт</td>
+                    <td class="py-4 px-6 text-center font-bold text-emerald-700 bg-emerald-50/10">${analytics.avgWeekly} шт</td>
+                    <td class="py-4 px-6 text-center font-medium">${item.balance} шт</td>
+                    <td class="py-4 px-6 text-center">${forecastBadge}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Render visual comparison charts
+            const progressContainer = document.getElementById("analytics-progress-container");
+            progressContainer.innerHTML = "";
+
+            inventoryData.forEach(item => {
+                const analytics = analyticsData[item.sku] || { thisWeek: 0, lastWeek: 0, avgWeekly: 5 };
+                const maxExpense = Math.max(...Object.values(analyticsData).map(a => a.thisWeek), 100);
+                const pct = Math.round((analytics.thisWeek / maxExpense) * 100);
+
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "p-3 border border-slate-100 rounded-xl bg-slate-50/50";
+                itemDiv.innerHTML = `
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-slate-700">${item.name} (${item.sku})</span>
+                        <span class="text-slate-500">Уход за 7 дней: <b>${analytics.thisWeek} шт</b></span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-3.5 overflow-hidden flex">
+                        <div class="bg-indigo-600 h-3.5 rounded-full transition-all duration-500" style="width: ${Math.max(pct, 4)}%"></div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
+                        <span>Прошлая неделя: ${analytics.lastWeek} шт</span>
+                        <span>Ср. темп: ${analytics.avgWeekly} шт / нед.</span>
+                    </div>
+                `;
+                progressContainer.appendChild(itemDiv);
+            });
+
+            // Render forecast charts
+            const forecastContainer = document.getElementById("analytics-forecast-container");
+            forecastContainer.innerHTML = "";
+
+            inventoryData.forEach(item => {
+                const analytics = analyticsData[item.sku] || { thisWeek: 0, lastWeek: 0, avgWeekly: 5 };
+                const weeksLeft = analytics.avgWeekly > 0 ? (item.balance / analytics.avgWeekly) : 0;
+                
+                let barColor = "bg-emerald-500";
+                if (weeksLeft <= 1) barColor = "bg-rose-500 animate-pulse";
+                else if (weeksLeft <= 2) barColor = "bg-amber-500";
+
+                const displayWidth = Math.min(Math.round((weeksLeft / 12) * 100), 100); // 12 weeks scale
+
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "p-3 border border-slate-100 rounded-xl bg-slate-50/50";
+                itemDiv.innerHTML = `
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-slate-700">${item.name} (${item.sku})</span>
+                        <span class="text-slate-600">Хватит на: <b>${weeksLeft.toFixed(1)} нед.</b></span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                        <div class="${barColor} h-3 rounded-full transition-all duration-500" style="width: ${Math.max(displayWidth, 4)}%"></div>
+                    </div>
+                    <div class="text-[9px] text-slate-400 mt-1 uppercase tracking-wider font-semibold text-right">
+                        Остаток: ${item.balance} шт
+                    </div>
+                `;
+                forecastContainer.appendChild(itemDiv);
+            });
+
+            lucide.createIcons();
+        }
+
+        // GENERAL TOAST NOTIFICATION
+        function showToast(message, isError = false) {
+            const toast = document.getElementById("toast");
+            const toastText = document.getElementById("toast-text");
+            const toastIcon = document.getElementById("toast-icon");
+
+            toastText.textContent = message;
+            
+            if (isError) {
+                toastIcon.innerHTML = `<i data-lucide="alert-circle" class="w-5 h-5 text-rose-500"></i>`;
+                toast.className = toast.className.replace("bg-slate-900", "bg-rose-900");
+            } else {
+                toastIcon.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>`;
+                toast.className = toast.className.replace("bg-rose-900", "bg-slate-900");
+            }
+            lucide.createIcons();
+
+            toast.classList.remove("translate-y-24", "opacity-0");
+            toast.classList.add("translate-y-0", "opacity-100");
+
+            setTimeout(() => {
+                toast.classList.remove("translate-y-0", "opacity-100");
+                toast.classList.add("translate-y-24", "opacity-0");
+            }, 3000);
+        }
+
+        // EXPORT/IMPORT BACKUP LOGIC
+        function downloadBackupJSON() {
+            const dataToBackup = {
+                products: products,
+                transactions: transactions,
+                exportDate: new Date().toISOString(),
+                version: "1.1"
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToBackup, null, 4));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `inventory_backup_${new Date().toISOString().substring(0, 10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("Резервная копия успешно скачана!");
+        }
+
+        function handleImportJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed && Array.isArray(parsed.products) && Array.isArray(parsed.transactions)) {
+                        if (confirm(`Вы действительно хотите импортировать данные? Это заменит текущие товары (${products.length} шт.) и операции (${transactions.length} шт.) на загруженные.`)) {
+                            products = parsed.products;
+                            transactions = parsed.transactions;
+                            saveToLocalStorage();
+                            updateDropdowns();
+                            showToast("База данных успешно восстановлена!");
+                            switchTab('dashboard');
+                        }
+                    } else {
+                        alert("Некорректный формат файла бэкапа.");
+                    }
+                } catch (err) {
+                    alert("Ошибка чтения файла: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function exportInventoryToCSV() {
+            const data = calculateInventory().inventory;
+            let csvContent = "\uFEFF";
+            csvContent += "Артикул;Наименование товара;Минимальный запас;Приход (шт);Расход (шт);Остаток (шт);Статус\r\n";
+
+            data.forEach(item => {
+                const row = [
+                    item.sku,
+                    `"${item.name.replace(/"/g, '""')}"`,
+                    item.minStock,
+                    item.inbound,
+                    item.outbound,
+                    item.balance,
+                    item.status
+                ];
+                csvContent += row.join(";") + "\r\n";
+            });
+
+            const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", encodedUri);
+            downloadAnchor.setAttribute("download", `Остатки_Склада_${new Date().toISOString().substring(0, 10)}.csv`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("Отчёт выгружен в формате CSV!");
+        }
+
+        function resetDatabaseToDemo() {
+            if (confirm("Вы уверены, что хотите сбросить ВСЕ текущие записи и вернуть начальные данные?")) {
+                products = [...demoProducts];
+                transactions = [...demoTransactions];
+                saveToLocalStorage();
+                updateDropdowns();
+                showToast("База успешно сброшена.");
+                switchTab('dashboard');
+            }
+        }
+    </script>
+</body>
+</html>
